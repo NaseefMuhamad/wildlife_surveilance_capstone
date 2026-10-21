@@ -1,0 +1,48 @@
+# BIRDSAI Dataset Configuration
+# Project: Thermal Wildlife Surveillance
+# Dataset subset: Real thermal video sequences
+
+dataset:
+  name: BIRDSAI
+  subset: real
+  annotation_format: MOT_CSV
+
+paths:
+  raw: data/raw
+  processed: data/processed
+
+  train:
+    images: data/raw/TrainReal/TrainReal/images
+    annotations: data/raw/TrainReal/TrainReal/annotations
+
+  test:
+    images: data/raw/TestReal/TestReal/images
+    annotations: data/raw/TestReal/TestReal/annotations
+
+annotation_columns:
+  - frame_number
+  - object_id
+  - x
+  - y
+  - w
+  - h
+  - class
+  - species
+  - occlusion
+  - noise
+
+detection_classes:
+  0: animal
+  1: human
+
+species_classes:
+  -1: unknown
+  0: human
+  1: elephant
+  2: lion
+  3: giraffe
+  4: dog
+  5: crocodile
+  6: hippo
+  7: zebra
+  8: rhino
