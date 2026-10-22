@@ -4,7 +4,7 @@
 
 The goal of this project is to develop a thermal wildlife surveillance system capable of detecting and monitoring humans and animals from aerial thermal imagery. The system aims to support ranger decision-making by automatically identifying objects of interest in thermal video streams and providing the foundation for future tracking and alert mechanisms.
 
-The project utilizes the BIRDSAI thermal wildlife dataset and follows a six-week implementation roadmap beginning with dataset exploration and ending with the deployment of an integrated surveillance pipeline.
+The project utilizes the BIRDSAI thermal wildlife dataset and follows a six-week implementation roadmap beginning with dataset exploration and ending with the deployment of an integrated surveillance pipeline
 
 ---
 
@@ -25,7 +25,7 @@ The project utilizes the BIRDSAI thermal wildlife dataset and follows a six-week
 
 ## Objective
 
-The objective of Week 1 was to understand the structure, quality, and suitability of the BIRDSAI dataset before model development. Since the project focuses on aerial thermal imagery, it was necessary to understand how images and annotations were organized, what object classes were available, and whether the available data aligned with the surveillance objectives of the project.
+The objective of Week 1 was to understand the structure, quality, and suitability of the BIRDSAI dataset before model development. Since the project focuses on aerial thermal imagery, it was necessary to understand how images and annotations were organized, what object classes were available, and whether the available data aligned with the surveillance objectives of this project.
 
 ---
 
