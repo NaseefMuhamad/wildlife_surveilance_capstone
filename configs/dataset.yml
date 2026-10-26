@@ -12,7 +12,7 @@ paths:
   processed: data/processed
 
   train:
-    images: data/raw/TrainReal/TrainReal/images
+    images: data/raw/TrainReal/TrainReal/
     annotations: data/raw/TrainReal/TrainReal/annotations
 
   test:
