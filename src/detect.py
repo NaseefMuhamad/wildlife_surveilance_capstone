@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 
 # Load pretrained YOLOv8
-model = YOL("yolov8n.pt")
+model = YOLO("yolov8n.pt")
 
 # Run prediction on one thermal frame
 results = model.predict(
