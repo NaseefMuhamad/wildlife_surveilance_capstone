@@ -4,6 +4,7 @@ TrainReal/
 TestReal/
 
 # Model weights
+models/
 *.pt
 # Training outputs
 runs/
