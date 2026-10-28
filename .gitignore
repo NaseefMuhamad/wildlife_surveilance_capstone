@@ -6,6 +6,10 @@ TestReal/
 # Model weights
 models/
 *.pt
+*.pth
+*.onnx
+runs/
+outputs/
 # Training outputs
 runs/
 # Python cache
