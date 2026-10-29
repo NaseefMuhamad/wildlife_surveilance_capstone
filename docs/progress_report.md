@@ -289,6 +289,11 @@ The following activities were completed:
 - Used two detection classes: animal (class 0) and human (class 1).
 - Included sequence identifiers in output filenames to prevent images from different sequences from overwriting one another.
 ---
+1. Objective
+The objective of Week 3 was to prepare the BIRDSAI thermal wildlife dataset for model training, convert its annotations into YOLO-compatible labels, organize the data into training and validation sets, and initiate fine-tuning of YOLOv8n.
+
+This stage aims to adapt the model to thermal imagery and the project's two main detection classes: animals and humans.
+
 Dataset Validation
 The dataset was checked to ensure that images and labels were correctly paired and that the labels followed the expected YOLO format.
 
@@ -439,6 +444,22 @@ The validation subset was created to monitor model performance on unseen samples
 
 The original TestReal partition remains reserved for future final evaluation.
 
+5. Fine-Tuning Configuration
+Fine-tuning was initiated using YOLOv8n initialized with pretrained weights and the prepared BIRDSAI dataset.
+
+The initial training configuration was:
+Parameter	Configuration
+Model	YOLOv8n
+Initial weights	yolov8n.pt
+Training epochs	5
+Image size	640 × 640
+Batch size	2
+Training device	CPU
+Workers	0
+
+A small batch size was selected because the available laptop has 8 GB of RAM and no dedicated GPU available for this training run. Consequently, training is taking considerable time.
+
+At the time of this report, fine-tuning had started, but final training results had not yet been confirmed. Therefore, no claim of improved detection performance can be made at this stage.
 ---
 
 # Week 4: Controlled Improvements
