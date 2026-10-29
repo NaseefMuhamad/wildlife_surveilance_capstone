@@ -460,6 +460,38 @@ Workers	0
 A small batch size was selected because the available laptop has 8 GB of RAM and no dedicated GPU available for this training run. Consequently, training is taking considerable time.
 
 At the time of this report, fine-tuning had started, but final training results had not yet been confirmed. Therefore, no claim of improved detection performance can be made at this stage.
+
+6. Challenges Encountered
+Several challenges were encountered during dataset preparation and model training.
+
+Variable image dimensions: The dataset contains images with different resolutions, requiring bounding-box coordinates to be normalized using each image's actual dimensions.
+
+Annotation conversion: The original MOT-style annotations required conversion into YOLO format while preserving the correct object classes and bounding-box information.
+
+Sequence-based organization: Images and annotations were stored by sequence, requiring reliable matching between annotation frame numbers and image filenames.
+
+Duplicate filenames: Different sequences contained images with repeated frame numbers. Unique output filenames were therefore necessary to prevent overwriting images and labels.
+
+Limited computing resources: Training and evaluation were performed on CPU hardware, resulting in long processing times.
+
+Class mapping: The pretrained model's COCO classes differ from the project's animal and human classes, making careful class handling necessary for fair performance comparisons.
+7. Current Status and Remaining Work
+Completed
+- Dataset inspection and annotation analysis.
+- CSV-to-YOLO annotation conversion.
+- Training and validation dataset organization.
+- Structural validation of the converted dataset.
+- Initial evaluation of the pretrained YOLOv8n model.
+- Initiation of model fine-tuning.
+In Progress or Remaining
+- Complete the current fine-tuning run.
+- Record the final training and validation metrics.
+- Examine training curves and model performance.
+- Inspect predicted bounding boxes to identify missed detections and false positives.
+- Compare the fine-tuned model against a correctly configured baseline.
+- Assess whether fine-tuning improves animal and human detection in thermal wildlife imagery.
+Conclusion
+Week 3 established a YOLO-compatible and structurally validated dataset for the thermal wildlife detection task. The pretrained YOLOv8n model was evaluated, and fine-tuning was initiated using the prepared BIRDSAI dataset.
 ---
 
 # Week 4: Controlled Improvements
