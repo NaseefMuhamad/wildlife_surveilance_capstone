@@ -311,6 +311,293 @@ Structural validation confirmed that:
 - No invalid bounding boxes were found during conversion.
 Although the structural checks passed, visual inspection is still necessary to confirm that the bounding boxes correctly align with objects in the thermal images.
 ---
+# Week 3: Dataset Preparation and Fine-Tuning
+
+## Objective
+
+The objective of Week 3 was to transition from baseline experimentation to model adaptation. While Week 2 established the performance of a COCO-pretrained YOLOv8n model on thermal imagery, Week 3 focused on preparing the BIRDSAI dataset for training, generating YOLO-compatible annotations, organizing the dataset into training and validation partitions, and initiating the fine-tuning process. The ultimate goal was to enable the model to learn the thermal characteristics of humans and animals directly from the BIRDSAI dataset rather than relying on features learned from RGB imagery.
+
+---
+
+## Dataset Preparation
+
+The original BIRDSAI dataset was provided in a sequence-based format containing thermal image frames and corresponding MOT-style annotation files.
+
+The dataset structure consisted of:
+
+```text
+TrainReal/
+    Images/
+    Annotations/
+
+TestReal/
+    Images/
+    Annotations/
+```
+
+Images were organized into individual sequence folders while annotations were provided as CSV files containing object information across multiple frames.
+
+Before training could begin, the dataset had to be transformed into a format compatible with the YOLO training framework.
+
+---
+
+## Dataset Validation
+
+A validation stage was conducted to understand dataset characteristics and identify any preprocessing requirements.
+
+A total of:
+
+```text
+40,661 images
+```
+
+were identified within the training partition.
+
+Analysis revealed that the dataset contains multiple image resolutions rather than a single standardized image size.
+
+Observed image dimensions included:
+
+```text
+321 × 700
+333 × 699
+398 × 840
+416 × 637
+512 × 640
+517 × 696
+518 × 698
+519 × 698
+520 × 698
+```
+
+### Observation
+
+The presence of varying image dimensions meant that bounding box normalization could not assume a fixed resolution. Instead, annotation conversion had to dynamically utilize the dimensions of each image during label generation.
+
+---
+
+## Annotation Analysis
+
+The original annotation format followed the Multiple Object Tracking (MOT) structure:
+
+```text
+frame_number
+object_id
+x
+y
+width
+height
+class
+species
+occlusion
+noise
+```
+
+The project uses the broad detection classes:
+
+```text
+0 = Animal
+1 = Human
+```
+
+Species information remains available for later analysis but was not used during the first fine-tuning phase.
+
+### Why the Annotations Were Important
+
+The annotations formed the foundation of the entire training process.
+
+Without annotations, the model would only see thermal images without any knowledge of object locations or object categories.
+
+The annotations provided:
+
+- Object location through bounding box coordinates.
+- Object category through class labels.
+- Tracking information through object identifiers.
+- Species information for future extensions.
+
+These annotations were ultimately responsible for teaching the model the distinction between animals and humans in thermal imagery.
+
+---
+
+## CSV to YOLO Conversion
+
+The original MOT annotations could not be used directly by YOLO.
+
+A conversion pipeline was developed to transform the dataset into YOLO format.
+
+Original annotation format:
+
+```text
+x
+y
+width
+height
+class
+```
+
+Converted YOLO format:
+
+```text
+class
+x_center
+y_center
+width
+height
+```
+
+All coordinates were normalized based on the dimensions of their corresponding image.
+
+---
+
+## Label Generation
+
+Following annotation conversion:
+
+```text
+21,209 image-label pairs
+```
+
+were generated.
+
+A total of:
+
+```text
+87,199 object annotations
+```
+
+were successfully converted into YOLO training labels.
+
+The converted labels preserved the project detection scheme:
+
+```text
+0 = Animal
+1 = Human
+```
+
+---
+
+## Dataset Organization and Splitting
+
+The processed dataset was reorganized into the structure expected by the Ultralytics YOLO framework.
+
+```text
+data/
+└── processed/
+    ├── images/
+    │   ├── train/
+    │   └── val/
+    │
+    └── labels/
+        ├── train/
+        └── val/
+```
+
+The dataset was split into:
+
+```text
+85% Training
+15% Validation
+```
+
+The validation subset was created to monitor model performance on unseen samples during training and reduce the risk of overfitting.
+
+The original TestReal partition remains reserved for future final evaluation.
+
+---
+
+## Fine-Tuning Setup
+
+The model selected for fine-tuning was:
+
+```text
+YOLOv8n
+```
+
+The model was initialized using COCO-pretrained weights and subsequently trained on the processed BIRDSAI thermal dataset.
+
+Training configuration:
+
+```text
+Model: YOLOv8n
+Dataset: BIRDSAI Thermal Dataset
+Classes: Animal, Human
+Epochs: 50
+Image Size: 640
+```
+
+Training was successfully initiated using the generated YOLO-formatted dataset.
+
+---
+
+## Early Observations
+
+Preliminary training outputs suggest that the model is beginning to learn the target classes defined by the BIRDSAI annotations.
+
+Unlike the baseline model, which frequently classified elephants as horses or sheep, the fine-tuned model is now producing predictions aligned with the annotation classes:
+
+```text
+Animal
+Human
+```
+
+This behavior indicates that the model is adapting to the thermal environment and learning task-specific representations from the training data.
+
+Initial qualitative inspection shows significantly better alignment between predicted bounding boxes and annotated objects.
+
+---
+
+## Challenges Encountered
+
+Several challenges emerged during this phase.
+
+### Annotation Conversion
+
+The first challenge involved understanding and converting sequence-based MOT annotations into YOLO format while preserving class information.
+
+### Variable Image Dimensions
+
+The dataset contained multiple image resolutions, requiring dynamic coordinate normalization rather than fixed-dimension calculations.
+
+### Sequence-Based Data Organization
+
+Images were stored inside sequence folders while annotations existed as sequence-level CSV files. This required reliable frame-to-image mapping during conversion.
+
+### Long Training Time
+
+Training was performed on CPU hardware rather than GPU hardware.
+
+As a result, training epochs required considerably longer execution times, increasing the overall duration of experimentation and model evaluation.
+
+### Class Imbalance
+
+Species distribution analysis revealed substantial imbalance within the dataset, particularly the dominance of elephant observations relative to lion observations.
+
+Although species labels are not used directly in the current detector, the imbalance highlights potential challenges for future species-level classification tasks.
+
+---
+
+## Current Status
+
+### Completed
+
+- Dataset validation
+- Annotation analysis
+- CSV to YOLO conversion
+- YOLO label generation
+- Dataset splitting
+- Dataset configuration
+- Fine-tuning initialization
+
+### In Progress
+
+- Model training
+- Quantitative evaluation
+- Error analysis
+
+---
+
+## Expected Week 3 Outcome
+
+By the conclusion of Week 3, a fine-tuned YOLOv8 model trained on thermal wildlife imagery will be available. Performance will be evaluated using Precision, Recall, F1-Score, mAP@50, and mAP@50-95. The resulting model will then be compared against the baseline established in Week 2 to quantify improvements achieved through dataset-specific fine-tuning.
 
 # Week 4: Controlled Improvements
 
