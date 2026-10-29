@@ -276,7 +276,40 @@ These findings justify the need for model fine-tuning and provide an initial ben
 - Fine-tune YOLOv8 on BIRDSAI.
 - Compute Precision, Recall, F1-Score, mAP@50 and mAP@50-95.
 - Perform error analysis.
+---
+Dataset Preparation
+The BIRDSAI dataset contains thermal images organized into sequences, with corresponding CSV files containing object annotations. Since the original annotations were not directly compatible with YOLO, a preprocessing pipeline was developed to prepare the dataset for object detection.
 
+The following activities were completed:
+- Inspected the image files and annotation files to understand the dataset structure.
+- Checked image readability and identified variations in image dimensions.
+- Matched annotation frame numbers to their corresponding image filenames.
+- Converted CSV annotations into YOLO-format label files.
+- Normalized bounding-box coordinates using the actual dimensions of each image.
+- Used two detection classes: animal (class 0) and human (class 1).
+- Included sequence identifiers in output filenames to prevent images from different sequences from overwriting one another.
+---
+Dataset Validation
+The dataset was checked to ensure that images and labels were correctly paired and that the labels followed the expected YOLO format.
+
+The original training partition contained 40,661 readable images, with no unreadable images identified during the initial inspection.
+
+The dataset was then organized into training and validation subsets using a sequence-level split. This helps prevent images from the same sequence from appearing in both subsets.
+Measurement	Training set	Validation set
+Images	18,028	3,181
+Sequences	27	5
+Bounding boxes	41,345	45,854
+
+A total of 21,209 image-label pairs and 87,199 bounding-box annotations were generated. These included 74,668 animal boxes and 12,531 human boxes.
+
+Structural validation confirmed that:
+- Every exported image had a corresponding label file.
+- Every label file had a corresponding image.
+- Class IDs were within the expected range.
+- Bounding-box coordinates were normalized between 0 and 1.
+- Training and validation sequences did not overlap.
+- No invalid bounding boxes were found during conversion.
+Although the structural checks passed, visual inspection is still necessary to confirm that the bounding boxes correctly align with objects in the thermal images.
 ---
 
 # Week 4: Controlled Improvements
