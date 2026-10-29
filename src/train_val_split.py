@@ -43,4 +43,15 @@ for img_path in val_imgs:
             str(val_lbl_dir / label_path.name)
         )
 
+
+print(
+    "Train Images:",
+    len(list(Path("data/processed/images/train").glob("*.jpg")))
+)
+
+print(
+    "Val Images:",
+    len(list(Path("data/processed/images/val").glob("*.jpg")))
+)        
+
 print("Validation split complete!")
