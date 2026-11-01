@@ -1,12 +1,7 @@
 from ultralytics import YOLO
 
-model = YOLO("yolov8n.pt")
-
-results = model.train(
-    data="configs/yolo_dataset.yaml",
-    epochs=50,
-    imgsz=640,
-    batch=8,
-    project="runs",
-    name="birdsai_yolov8n"
+model = YOLO(
+    r"runs/detect/runs/birdsai_yolov8n-2/weights/last.pt"
 )
+
+model.train(resume=True)
