@@ -1,7 +1,8 @@
-path: data/processed
+path: data/processed_v3_seed1
 
 train: images/train
 val: images/val
+test: images/test
 
 names:
   0: animal

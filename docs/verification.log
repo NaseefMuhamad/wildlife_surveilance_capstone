@@ -1,0 +1,16 @@
+test_documented_27_5_split_is_deterministic_and_disjoint (test_annotations.DatasetRegressionTests.test_documented_27_5_split_is_deterministic_and_disjoint) ... ok
+test_frame_ids_are_matched_and_source_data_is_preserved (test_annotations.DatasetRegressionTests.test_frame_ids_are_matched_and_source_data_is_preserved) ... ok
+test_invalid_boxes_classes_and_pairing_fail (test_annotations.DatasetRegressionTests.test_invalid_boxes_classes_and_pairing_fail) ... ok
+test_leakage_is_rejected (test_annotations.DatasetRegressionTests.test_leakage_is_rejected) ... ok
+test_manifest_detects_modified_labels (test_annotations.DatasetRegressionTests.test_manifest_detects_modified_labels) ... ok
+test_missing_and_empty_datasets_do_not_pass (test_annotations.DatasetRegressionTests.test_missing_and_empty_datasets_do_not_pass) ... ok
+test_missing_annotated_frames_require_explicit_acknowledgment (test_annotations.DatasetRegressionTests.test_missing_annotated_frames_require_explicit_acknowledgment) ... ok
+test_no_splits_cannot_report_success (test_annotations.DatasetRegressionTests.test_no_splits_cannot_report_success) ... ok
+test_nonfinite_annotations_and_duplicate_frame_ids_fail (test_annotations.DatasetRegressionTests.test_nonfinite_annotations_and_duplicate_frame_ids_fail) ... ok
+test_matrix_confidence_does_not_inherit_ap_floor (test_confusion_threshold.ConfusionThresholdTests.test_matrix_confidence_does_not_inherit_ap_floor) ... ok
+test_matrix_uses_documented_matching_iou (test_confusion_threshold.ConfusionThresholdTests.test_matrix_uses_documented_matching_iou) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 3.633s
+
+OK

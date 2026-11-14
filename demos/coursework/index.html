@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reserve Watch</title>
+<style>
+:root{color-scheme:dark;--base:#101714;--card:#18221d;--edge:#34443a;--muted:#a5b5aa;--text:#eff5eb;--green:#c3ef8b;--amber:#ffc37a}
+*{box-sizing:border-box}body{margin:0;background:var(--base);color:var(--text);font:15px/1.5 "Inter",system-ui,sans-serif}main{max-width:1260px;margin:auto;padding:32px 24px 48px}header,.bar,.controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}header{border-bottom:1px solid var(--edge);padding-bottom:18px;margin-bottom:24px}h1,h2,p{margin:0}h1{font-size:32px;letter-spacing:-.06em}h2{font-size:18px}small,.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}.stack{display:grid;gap:18px}.card{border:1px solid var(--edge);border-radius:14px;background:var(--card);padding:18px}.feed{margin:14px 0;display:block;width:100%;aspect-ratio:640/512;object-fit:contain;background:#090d0b;border-radius:8px}.status{color:var(--green);font-size:13px}.high{color:var(--amber)}button,select,input,textarea{font:inherit;color:inherit;border:1px solid var(--edge);border-radius:7px;background:#111a15;padding:8px 10px}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.primary{background:var(--green);color:#16230f;border-color:var(--green);font-weight:700}.fields{display:grid;gap:9px;margin-top:12px}.fields label{display:grid;gap:4px}article{border-top:1px solid var(--edge);padding:12px 0}article:first-child{margin-top:12px}article:last-child{padding-bottom:0}.frame{display:block;width:min(100%,240px);margin:8px 0;border-radius:6px}.mono{font-variant-numeric:tabular-nums}details{margin-top:12px}summary{cursor:pointer}.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.row input{min-width:0}.patrol{margin-top:9px}.review{margin-top:12px}.scrub{flex:1;min-width:100px}.empty{margin-top:12px}@media(max-width:790px){.grid{grid-template-columns:1fr}}
+main{max-width:1600px}
+.grid{grid-template-columns:minmax(0,1fr) minmax(270px,320px)}
+.feed-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.wall-bar{margin-bottom:14px}
+.feed-grid .card{padding:12px;min-width:0}
+.feed-grid h3{margin:0;font-size:15px;line-height:1.35}
+.feed-grid .feed{margin:10px 0;aspect-ratio:4/3}
+.feed-grid .review{margin-top:8px;font-size:13px}
+.alert-summary{margin-top:5px;font-weight:700}
+.alert-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.review-history summary{color:var(--muted)}
+@media(max-width:1150px){.feed-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:790px){.grid{grid-template-columns:1fr}}
+@media(max-width:510px){main{padding:16px 12px}.feed-grid{grid-template-columns:1fr}}
+.layout-picker{display:flex;align-items:center;gap:8px}
+.feed-grid[data-layout="focus"] > section:first-child{grid-column:1/-1}
+.feed-grid[data-layout="focus"] > section:first-child .feed{max-height:55vh}
+.grid:has(.feed-grid[data-layout="review"]){grid-template-columns:minmax(0,1fr) minmax(300px,440px)}
+.feed-grid[data-layout="review"]{grid-template-columns:repeat(2,minmax(0,1fr))}
+.feed-grid[data-layout="review"] > section:first-child{grid-column:1/-1}
+@media(max-width:790px){.grid:has(.feed-grid[data-layout="review"]){grid-template-columns:1fr}}
+@media(max-width:510px){.feed-grid[data-layout="review"]{grid-template-columns:1fr}}
+</style>
+<main>
+<header><div><h1>Reserve Watch</h1><small>Thermal camera replay · Simulated patrol records and timestamps</small></div><span class="status" id="session">Loading replay</span></header>
+<div class="grid">
+<section aria-labelledby="wallTitle">
+<div class="bar wall-bar"><div><h2 id="wallTitle">Thermal feeds</h2><small>Recorded footage · North Trail generates review alerts</small></div>
+<div class="controls">
+<label class="layout-picker">Layout
+<select id="wallLayout"><option value="wall">Camera wall</option><option value="focus">North Trail focus</option><option value="review">Ranger review</option></select>
+</label>
+<button id="playAll" disabled>Play all</button><button id="pauseAll" disabled>Pause all</button></div></div>
+<div class="feed-grid" id="feeds">
+<section class="card" aria-labelledby="camera">
+<div class="bar"><div><h3 id="camera">North Trail</h3><small>CAM-01 · Tracking and alerts</small></div><span class="mono muted" id="clock"></span></div>
+<img class="feed" id="feed" alt="Thermal footage with YOLO detection boxes">
+<div class="controls"><button class="primary" id="play" disabled>Play replay</button><button id="restart" disabled>Restart</button><button id="reset" disabled>Clear demo reviews</button><input aria-label="Replay frame" class="scrub" id="scrub" type="range" min="0" value="0" disabled><span class="mono muted" id="position"></span></div>
+<p class="muted review" id="counts"></p>
+<ul class="muted review" id="frameDetails" aria-label="Paused frame detections" hidden></ul>
+</section>
+</div>
+</section>
+<div class="stack">
+<section class="card"><div class="bar"><h2>Review queue</h2><span class="status" id="openCount" aria-live="polite"></span></div><div id="queue"></div></section>
+<section class="card"><h2>Patrol register</h2><small>Simulated assignments · East Africa Time</small><div id="patrols"></div>
+<details><summary>Add patrol</summary><form class="fields" id="patrolForm">
+<label>Team<input name="team" required maxlength="60"></label><label>Assigned area<select name="area"><option>North Trail</option><option>River Gate</option></select></label>
+<div class="row"><label>Departure<input name="departure" type="time" required></label><label>Expected return<input name="returnTime" type="time" required></label></div><button type="submit">Add patrol</button><small id="patrolError" role="alert"></small></form></details>
+</section>
+</div>
+</div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+$('wallLayout').addEventListener('change', event => {
+  $('feeds').dataset.layout = event.target.value;
+});
+const outcomes = ['Confirmed ranger', 'Other authorised person', 'Unverified'];
+let frames = [], state = {patrols: [], alerts: []};
+let index = 0, timer = null, pending = Promise.resolve();
+const clips = [];
+
+async function api(route, data) {
+  const options = data === undefined ? {} : {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+  };
+  const response = await fetch('/api/' + route, options);
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || 'The request failed.');
+  return body;
+}
+function mutate(route, data) {
+  const task = pending.then(async () => {
+    const next = await api(route, data);
+    if (JSON.stringify(next) !== JSON.stringify(state)) {
+      state = next;
+      renderPatrols();
+      renderAlerts();
+    }
+  });
+  pending = task.catch(() => {});
+  return task;
+}
+function showError(error) {
+  pause();
+  $('session').textContent = error.message;
+}
+const fmt = value => value.slice(11,19) + ' EAT';
+const pct = value => Math.round(value * 100) + '%';
+function node(tag, text, className) {
+  const item = document.createElement(tag);
+  if (text !== undefined) item.textContent = text;
+  if (className) item.className = className;
+  return item;
+}
+function renderPatrols() {
+  $('patrols').replaceChildren(...state.patrols.map(p =>
+    node('p', p.team + ' · ' + p.area + ' · ' + p.departure + '–' + p.returnTime, 'patrol')));
+}
+function renderAlerts() {
+  const queue = $('queue');
+  const historyWasOpen = queue.querySelector('.review-history')?.open ?? false;
+  const newestFirst = [...state.alerts].reverse();
+  const open = newestFirst.filter(alert => !alert.outcome);
+  const reviewed = newestFirst.filter(alert => alert.outcome);
+  $('openCount').textContent = open.length + ' open';
+  queue.replaceChildren();
+  if (!open.length) queue.append(node('p','No open alerts.','empty muted'));
+  for (const alert of open) queue.append(renderAlert(alert));
+  if (reviewed.length) {
+    const history = node('details', undefined, 'review-history');
+    history.open = historyWasOpen;
+    history.append(node('summary', 'Reviewed (' + reviewed.length + ')'));
+    for (const alert of reviewed) history.append(renderAlert(alert));
+    queue.append(history);
+  }
+}
+function renderAlert(alert) {
+    const article = node('article');
+    const matching = alert.matching_teams;
+    article.append(node('strong', alert.outcome || (matching.length ? 'Awaiting review · Patrol scheduled' : 'Awaiting review · No patrol scheduled'), alert.outcome ? 'status' : 'high'));
+    article.append(node('p', alert.camera + ' · ' + alert.area + ' · ' + fmt(alert.time)));
+    const summary = alert.expected === undefined
+      ? alert.count + ' human boxes in alert frame'
+      : headcount(alert.count, alert.expected, alert.excess);
+    article.append(node('p', summary, 'alert-summary'));
+    const alertFrame = frames[alert.frame]?.name === alert.name ? frames[alert.frame] : null;
+    const humanDetections = alert.human_detections ?? alertFrame?.detections.filter(box => box.class === 'human');
+    if (humanDetections?.length) {
+      const detections = node('ul', undefined, 'muted');
+      for (const box of humanDetections) {
+        detections.append(node('li', detectionLabel('Human', box)));
+      }
+      article.append(detections);
+    } else {
+      article.append(node('small', 'Peak model confidence ' + pct(alert.confidence)));
+      if (alert.track_ids?.length) article.append(node('p', 'Human track IDs: ' + alert.track_ids.join(', '), 'muted'));
+    }
+    if (alertFrame) {
+      const image = node('img', undefined, 'frame');
+      image.src = alertFrame.image;
+      image.alt = 'Thermal frame that triggered this alert';
+      article.append(image);
+      const actions = node('div', undefined, 'alert-actions');
+      const jump = node('button', 'View alert frame');
+      jump.type = 'button';
+      jump.onclick = () => {
+        pause();
+        show(alert.frame, false);
+        $('scrub').focus();
+      };
+      actions.append(jump);
+      article.append(actions);
+    }
+    if (matching.length) article.append(node('p', matching.join(', ') + ' scheduled. Contact the team to confirm.', 'muted'));
+    if (alert.outcome) {
+      if (alert.note) article.append(node('p', alert.note, 'muted'));
+    } else {
+      const form = node('form', undefined, 'fields');
+      const outcome = node('select');
+      outcome.setAttribute('aria-label','Review outcome');
+      for (const choice of outcomes) outcome.append(node('option', choice));
+      outcome.value = 'Unverified';
+      const note = node('input');
+      note.maxLength = 500;
+      note.placeholder = 'Review note (optional)';
+      note.setAttribute('aria-label','Review note');
+      const close = node('button','Record outcome and close','primary');
+      form.append(outcome, note, close);
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        close.disabled = true;
+        try {
+          await mutate('reviews', {id: alert.id, outcome: outcome.value, note: note.value.trim()});
+        } catch (error) {
+          close.disabled = false;
+          showError(error);
+        }
+      });
+      article.append(form);
+    }
+    return article;
+}
+function headcount(detected, expected, excess) {
+  return detected + ' detected · ' + expected + ' expected · ' + excess + ' extra';
+}
+function detectionLabel(label, box) {
+  return label + ' · Track #' + box.track_id + ' · ' + pct(box.confidence) + ' confidence';
+}
+function renderFrameDetails() {
+  const details = $('frameDetails');
+  details.hidden = timer !== null || !frames[index]?.detections.length;
+  details.replaceChildren();
+  if (!details.hidden) {
+    for (const box of frames[index].detections) {
+      const label = box.class === 'human' ? 'Human' : 'Animal';
+      details.append(node('li', detectionLabel(label, box)));
+    }
+  }
+}
+function show(next, notify) {
+  index = next;
+  const frame = frames[index];
+  const humans = frame.detections.filter(box => box.class === 'human');
+  $('feed').src = frame.image;
+  $('clock').textContent = fmt(frame.time);
+  $('position').textContent = (index + 1) + ' / ' + frames.length;
+  $('scrub').value = index;
+  $('counts').textContent = headcount(humans.length, frame.expected, frame.excess);
+  $('counts').classList.toggle('high', frame.excess > 0);
+  renderFrameDetails();
+  if (notify && frame.excess > 0) mutate('observe', {frame: index}).catch(showError);
+}
+function pause() {
+  clearInterval(timer);
+  timer = null;
+  $('play').textContent = 'Play replay';
+  $('session').textContent = 'Replay paused';
+  renderFrameDetails();
+}
+function playReplay() {
+  if (timer || !frames.length) return;
+  if (index === frames.length - 1) { index = 0; }
+  show(index, true);
+  $('play').textContent = 'Pause';
+  $('session').textContent = 'Replay playing';
+  timer = setInterval(() => index + 1 < frames.length ? show(index + 1, true) : pause(), 700);
+  renderFrameDetails();
+}
+$('play').onclick = () => timer ? pause() : playReplay();
+$('restart').onclick = () => { pause(); show(0, false); };
+$('reset').onclick = async () => {
+  if (!confirm('Clear the saved alerts and review outcomes for this demo?')) return;
+  $('restart').onclick();
+  try { await mutate('reset', {}); } catch (error) { showError(error); }
+};
+$('scrub').oninput = event => { pause(); show(Number(event.target.value), false); };
+$('playAll').onclick = () => {
+  playReplay();
+  for (const {player, status} of clips) {
+    player.play().catch(error => {
+      if (error.name !== 'AbortError') status.textContent = 'Use this feed’s play control to retry.';
+    });
+  }
+};
+$('pauseAll').onclick = () => {
+  if (frames.length) pause();
+  for (const {player} of clips) player.pause();
+};
+async function loadClip(video) {
+  const tile = node('section', undefined, 'card');
+  const title = node('h3', video.label);
+  const player = node('video', undefined, 'feed');
+  player.controls = true;
+  player.playsInline = true;
+  player.muted = true;
+  player.loop = true;
+  player.setAttribute('aria-label', video.label);
+  const status = node('small', 'Loading video');
+  tile.append(title, player, status);
+  $('feeds').append(tile);
+  player.addEventListener('error', () => { status.textContent = 'This browser could not play the video.'; });
+  try {
+    const response = await fetch(video.url);
+    if (!response.ok) throw new Error('Video unavailable.');
+    player.src = URL.createObjectURL(await response.blob());
+    status.textContent = '';
+    clips.push({player, status});
+    $('playAll').disabled = $('pauseAll').disabled = false;
+  } catch (error) {
+    status.textContent = error.message;
+  }
+}
+$('patrolForm').onsubmit = async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const record = Object.fromEntries(new FormData(form));
+  try {
+    await mutate('patrols', record);
+    form.reset();
+    $('patrolError').textContent = '';
+  } catch (error) {
+    $('patrolError').textContent = error.message;
+  }
+};
+Promise.all([api('frames'), api('state')]).then(([replay, current]) => {
+  frames = replay;
+  state = current;
+  $('scrub').max = frames.length - 1;
+  for (const id of ['scrub','restart','reset','play']) $(id).disabled = false;
+  $('playAll').disabled = $('pauseAll').disabled = false;
+  renderPatrols();
+  renderAlerts();
+  pause();
+  show(0, false);
+}).catch(showError);
+api('videos').then(videos => Promise.all(videos.map(loadClip))).catch(showError);
+</script>
+</html>

@@ -9,7 +9,7 @@ dataset:
 
 paths:
   raw: data/raw
-  processed: data/processed
+  processed: data/processed_v3_seed1
 
   train:
     images: data/raw/TrainReal/TrainReal/images

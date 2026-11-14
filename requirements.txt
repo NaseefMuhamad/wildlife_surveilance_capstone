@@ -1,12 +1,10 @@
-ultralytics
-torch
-torchvision
-opencv-python
-numpy
-pandas
-matplotlib
-pyyaml
-pillow
-scikit-learn
-tqdm
-seaborn
+# Install the chosen torch backend FIRST, then these shared dependencies.
+torch==2.8.0
+torchvision==0.23.0
+ultralytics==8.4.183
+numpy==2.4.6
+opencv-python==5.0.0.93
+pillow==13.0.0
+pyyaml==6.0.3
+matplotlib==3.11.2
+pandas==3.0.6
