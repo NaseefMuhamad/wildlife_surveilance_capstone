@@ -18,6 +18,7 @@ __pycache__/
 # Virtual environments
 venv/
 .venv/
+.xpu-python
 # Environment variables
 .env
 # Jupyter checkpoints

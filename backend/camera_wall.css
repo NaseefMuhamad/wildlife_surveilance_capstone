@@ -1,0 +1,155 @@
+:root {
+  color-scheme: dark;
+  --base: #141d24;
+  --card: #202d36;
+  --edge: #384b57;
+  --muted: #b0c2ca;
+  --text: #edf4f5;
+  --green: #83ddc4;
+  --amber: #ffc482;
+}
+
+button, select, input, textarea {
+  background: #18252d;
+}
+
+.primary {
+  color: #102820;
+}
+
+a {
+  color: var(--green);
+}
+
+.feed-viewport {
+  background: #10171d;
+}
+
+.feed-expand {
+  position: absolute;
+  inset: 8px 8px auto auto;
+  z-index: 2;
+  padding: 4px 8px;
+  color: #fff;
+  background: #18252d;
+  font-size: 13px;
+}
+
+.feed-grid .feed-viewport:fullscreen,
+.feed-grid .feed-viewport.feed-enlarged {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  background: #10171d;
+}
+
+.feed-grid .feed-viewport.feed-enlarged {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+main > header {
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  background: #293e55;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+}
+
+main > header h1 {
+  font-size: 24px;
+}
+
+main > header small,
+main > header .status {
+  color: #deebf7;
+}
+
+.feed-grid .card {
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.feed-grid .feed-heading {
+  min-height: 40px;
+  margin: -8px -8px 8px;
+  padding: 6px 8px;
+  background: #293b46;
+  border-bottom: 1px solid var(--edge);
+}
+
+.feed-grid .feed-heading h3 {
+  font-size: 14px;
+}
+
+main {
+  max-width: none;
+  padding: 16px clamp(10px, 1.4vw, 24px) 32px;
+}
+
+main > .grid:has(.camera-directory) {
+  grid-template-columns: minmax(155px, 17%) minmax(0, 1fr) minmax(230px, 23%);
+  gap: 12px;
+}
+
+.grid > section {
+  min-width: 0;
+}
+
+.camera-directory {
+  padding: 12px;
+}
+
+.camera-directory > a {
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.camera-directory ul {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+}
+
+.camera-directory button {
+  width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+  border-inline-start: 2px solid var(--green);
+}
+
+.camera-directory button small {
+  display: block;
+}
+
+.feed-grid:is(:not([data-layout]), [data-layout="wall"]) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.feed-grid:is(:not([data-layout]), [data-layout="wall"]) > .card {
+  padding: 8px;
+}
+
+.feed-grid:is(:not([data-layout]), [data-layout="wall"]) .feed-viewport {
+  aspect-ratio: 16 / 9;
+}
+
+@media (max-width: 1050px) {
+  main > .grid:has(.camera-directory) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .feed-grid:is(:not([data-layout]), [data-layout="wall"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .feed-grid:is(:not([data-layout]), [data-layout="wall"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

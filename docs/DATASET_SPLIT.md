@@ -63,3 +63,40 @@ The original export's `manifest.json` and `*_sequences.txt` files record the
 split membership, counts, label hashes and exclusions under
 `data/processed_v3_seed1/`. The preparation code is
 `src/prepare_yolo_dataset.py`. This dataset audit precedes retraining.
+
+## Retraining preflight
+
+The checked-in training YAML points to the dataset relative to the repository.
+The exported dataset YAML uses `path: .`, which the project CLI resolves
+relative to that YAML. The CLI supplies Ultralytics with an absolute path
+resolved on the current machine. Absolute locations in manifests record
+provenance. Reproduce the dataset from seed 1 and retain the manifest and
+checkpoint hashes when comparing runs.
+
+The training YAML resolves to this export, and the local pretrained
+`yolov8n.pt` and historical `best.pt` were found. The active environment
+reported PyTorch 2.15.0+xpu, torchvision 0.29.2+xpu and Ultralytics 8.4.183.
+Intel Arc Graphics is available as `xpu:0`. A synthetic YOLOv8n batch of
+two 640 × 640 images completed a forward pass, backward pass and SGD step
+on that device. A full training epoch will establish the runtime on real data.
+
+### Intel Arc training restart
+
+PyTorch 2.15.0+xpu failed on the first real batch with a Level Zero
+`UR_RESULT_ERROR_OUT_OF_RESOURCES` error during YOLO target preparation.
+The synthetic preflight had not exercised that code path. We restarted
+using the existing PyTorch 2.8.0+xpu environment from the earlier successful
+Intel Arc run. The new run, `birdsai_corrected_20261114_233917_200688`,
+passed the first real batches at 640 px, batch 2, workers 0 and AMP disabled.
+It uses fresh `yolov8n.pt` weights, a maximum of 50 epochs and patience 10.
+The assistant-started run was stopped on request during epoch 1, after
+228 of 9,056 batches were logged. The user will launch the next run manually.
+
+The manual command using `PYTHONPATH` loaded PyTorch from the project's
+`.venv` before the GPU environment and failed to load `c10_xpu.dll`.
+The training launcher now reads the local, Git-ignored `.xpu-python` file,
+starts that interpreter with `-E`, and appends the project dependencies
+after the GPU environment's packages. Run `python src/train.py` from the
+repository root. The defaults are Intel Arc (`xpu:0`), 50 epochs and patience 10.
+On another machine, use a compatible XPU environment or configure its
+interpreter in that machine's own `.xpu-python` file.

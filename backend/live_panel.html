@@ -1,0 +1,166 @@
+<template id="live-camera-template">
+  <section class="card">
+    <div class="bar feed-heading">
+      <h3></h3>
+      <button type="button">Disconnect</button>
+    </div>
+    <div class="feed-viewport"><img class="feed" alt="" style="visibility:hidden"></div>
+    <small role="status"></small>
+  </section>
+</template>
+<script>
+(() => {
+  const feeds = document.querySelector('#feeds');
+  const template = document.querySelector('#live-camera-template');
+  const areaSelect = document.querySelector('#patrolForm select[name="area"]');
+  if (areaSelect) {
+    const areaInput = document.createElement('input');
+    areaInput.name = 'area';
+    areaInput.required = true;
+    areaInput.maxLength = 60;
+    areaInput.placeholder = 'Enter a location';
+    areaSelect.replaceWith(areaInput);
+  }
+  const sidebar = document.createElement('aside');
+  sidebar.className = 'camera-directory card';
+  sidebar.setAttribute('aria-label', 'Camera directory');
+  const title = document.createElement('h2');
+  title.textContent = 'Cameras';
+  const add = document.createElement('a');
+  add.href = '/live';
+  add.textContent = 'Add live camera';
+  const directory = document.createElement('ul');
+  sidebar.append(title, add, directory);
+  feeds.parentElement.before(sidebar);
+  const tiles = new Map();
+
+  function addExpandControls() {
+    for (const tile of feeds.children) {
+      const viewport = tile.querySelector('.feed-viewport');
+      if (!viewport || viewport.querySelector('.feed-expand')) continue;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'feed-expand';
+      button.textContent = 'Expand';
+      button.setAttribute('aria-label', 'Expand ' + (tile.querySelector('h3')?.textContent || 'feed'));
+      button.onclick = async () => {
+        try {
+          if (document.fullscreenElement === viewport) {
+            await document.exitFullscreen();
+          } else {
+            await viewport.requestFullscreen();
+          }
+        } catch {
+          viewport.classList.toggle('feed-enlarged');
+          sync();
+        }
+      };
+      function sync() {
+        const expanded = document.fullscreenElement === viewport ||
+          viewport.classList.contains('feed-enlarged');
+        button.textContent = expanded ? 'Exit expanded view' : 'Expand';
+        button.setAttribute('aria-label', expanded ? 'Exit expanded view' :
+          'Expand ' + (tile.querySelector('h3')?.textContent || 'feed'));
+      }
+      viewport.addEventListener('fullscreenchange', sync);
+      viewport.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && viewport.classList.contains('feed-enlarged')) {
+          viewport.classList.remove('feed-enlarged');
+          sync();
+        }
+      });
+      viewport.append(button);
+    }
+  }
+
+  function updateDirectory() {
+    addExpandControls();
+    const entries = Array.from(feeds.children, tile => {
+      const item = document.createElement('li');
+      const button = document.createElement('button');
+      const name = tile.querySelector('h3')?.textContent;
+      if (!name) return null;
+      button.textContent = name;
+      const source = document.createElement('small');
+      source.textContent = tile.id.startsWith('camera-') ? 'Live camera' : 'Recording';
+      button.append(source);
+      button.onclick = () => {
+        tile.scrollIntoView({block: 'nearest'});
+        tile.focus({preventScroll: true});
+      };
+      tile.tabIndex = -1;
+      item.append(button);
+      return item;
+    }).filter(Boolean);
+    directory.replaceChildren(...entries);
+  }
+
+  new MutationObserver(updateDirectory).observe(feeds, {childList: true});
+  updateDirectory();
+
+  async function refresh() {
+    try {
+      const response = await fetch('/api/live/status', {cache: 'no-store'});
+      if (!response.ok) throw new Error('Camera status unavailable.');
+      const cameras = await response.json();
+      const active = new Set(cameras.map(camera => camera.id));
+      for (const [id, tile] of tiles) {
+        if (!active.has(id)) {
+          tile.remove();
+          tiles.delete(id);
+        }
+      }
+      for (const camera of cameras) {
+        let tile = tiles.get(camera.id);
+        if (!tile) {
+          tile = template.content.firstElementChild.cloneNode(true);
+          tile.id = 'camera-' + camera.id;
+          tile.querySelector('h3').textContent = camera.location
+            ? camera.name + ' · ' + camera.location
+            : camera.name;
+          tile.querySelector('img').alt = camera.name;
+          tile.querySelector('button').onclick = async event => {
+            const button = event.currentTarget;
+            button.disabled = true;
+            try {
+              const result = await fetch('/api/live/disconnect', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: camera.id})
+              });
+              if (!result.ok) throw new Error('Could not disconnect camera.');
+            } catch (error) {
+              tile.querySelector('small').textContent = error.message;
+            } finally {
+              button.disabled = false;
+            }
+          };
+          feeds.append(tile);
+          tiles.set(camera.id, tile);
+          if (location.hash === '#' + tile.id) tile.scrollIntoView({block: 'nearest'});
+        }
+        const frame = tile.querySelector('img');
+        const live = camera.status === 'live';
+        const detections = camera.detections || [];
+        tile.querySelector('small').textContent = camera.error ||
+          (live && camera.detection_error ? 'Live video (detection unavailable)' : camera.status);
+        if (live && detections.length) {
+          const humans = detections.filter(box => box.class === 'human').length;
+          const animals = detections.filter(box => box.class === 'animal').length;
+          tile.querySelector('small').textContent = `Live · ${humans} human · ${animals} animal`;
+        }
+        frame.style.visibility = live ? 'visible' : 'hidden';
+        if (live) frame.src = '/api/live/frame?id=' + camera.id + '&t=' + camera.updated;
+      }
+    } catch {
+      for (const tile of tiles.values()) {
+        tile.querySelector('small').textContent = 'Camera status unavailable.';
+        tile.querySelector('img').style.visibility = 'hidden';
+      }
+    } finally {
+      setTimeout(refresh, 700);
+    }
+  }
+
+  refresh();
+})();
+</script>

@@ -7,11 +7,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 from pathlib import Path
 from threading import Lock
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from PIL import Image, ImageDraw, ImageFont
 
 from src.tracking import DetectionTracker
+from backend.live_video import LiveCameras
 
 PROJECT = Path(__file__).resolve().parents[1]
 DEFAULT_RUN = PROJECT / "outputs/predictions/prediction_20261111_211648_193762"
@@ -102,7 +103,7 @@ def matching_patrols(alert, patrols):
     for patrol in patrols:
         departure, expected = patrol["departure"], patrol["returnTime"]
         on_duty = departure <= at <= expected if departure < expected else at >= departure or at <= expected
-        if patrol["area"] == alert["area"] and on_duty:
+        if patrol["area"].strip().casefold() == alert["area"].strip().casefold() and on_duty:
             teams.append(patrol["team"])
     return teams
 
@@ -135,7 +136,10 @@ class ReviewStore:
                 team, area, departure, expected = (data.get(k) for k in ("team", "area", "departure", "returnTime"))
                 if not isinstance(team, str) or not team.strip() or len(team) > 60:
                     raise ValueError("Enter a team name up to 60 characters.")
-                if area not in (AREA, "River Gate") or departure == expected or not all(
+                if not isinstance(area, str) or not area.strip() or len(area) > 60:
+                    raise ValueError("Enter a patrol location of up to 60 characters.")
+                area = area.strip()
+                if departure == expected or not all(
                     isinstance(value, str) and re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", value)
                     for value in (departure, expected)
                 ):
@@ -165,7 +169,7 @@ class ReviewStore:
             ]}
 
 
-def make_handler(frames, images, store, port, legacy_ui=False):
+def make_handler(frames, images, store, port, legacy_ui=False, live=None):
     page = (PROJECT / "demos/coursework/index.html").read_bytes() if legacy_ui else None
     image_routes = {frame["image"]: (image, frame) for frame, image in zip(frames, images)}
     animal_video = "birdsai-0357-animal-detections.webm"
@@ -173,10 +177,10 @@ def make_handler(frames, images, store, port, legacy_ui=False):
         animal_video = "birdsai-0357-preview.webm"
     video_sources = (
         (animal_video, "BIRDSAI 0357 · animal detection test", "video/webm"),
-        ("nz-thermal-1486055-detections.webm", "New Zealand Wildlife Thermal Imaging · clip 1486055", "video/webm"),
-        ("nz-thermal-720986-detections.webm", "New Zealand thermal · deer", "video/webm"),
-        ("nz-thermal-581381-detections.webm", "New Zealand thermal · wallaby", "video/webm"),
-        ("nz-thermal-1480305-detections.webm", "New Zealand thermal · kiwi", "video/webm"),
+        ("nz-thermal-1486055-detections.webm", "Thermal recording · clip 1486055", "video/webm"),
+        ("nz-thermal-720986-detections.webm", "Thermal recording · deer", "video/webm"),
+        ("nz-thermal-581381-detections.webm", "Thermal recording · wallaby", "video/webm"),
+        ("nz-thermal-1480305-detections.webm", "Thermal recording · kiwi", "video/webm"),
         ("bu-tiv-detection-preview.webm", "BU-TIV atrium · model predictions", "video/webm"),
         ("bu-tiv-atrium-orange.mp4", "BU-TIV atrium · original footage", "video/mp4"),
     )
@@ -219,9 +223,38 @@ def make_handler(frames, images, store, port, legacy_ui=False):
 
         def do_GET(self):
             route = urlsplit(self.path).path
-            if route == "/":
+            if route == "/live":
+                self.send_body((PROJECT / "backend/live.html").read_bytes(), "text/html; charset=utf-8")
+            elif route == "/dashboard":
+                frontend = PROJECT.parent / "wildlife-frontend/index.html"
+                if not frontend.is_file():
+                    return self.send_body(
+                        b'<p>Place the wildlife-frontend repository beside the backend.</p><a href="/live">Camera setup</a>',
+                        "text/html; charset=utf-8", 404,
+                    )
+                dashboard = frontend.read_text(encoding="utf-8-sig")
+                dashboard = dashboard.replace(
+                    '<script src="config.js"></script>',
+                    '<script>window.reserveWatchApi = location.origin;</script>',
+                    1,
+                )
+                panel = (PROJECT / "backend/live_panel.html").read_text(encoding="utf-8")
+                layout = (PROJECT / "backend/camera_wall.css").read_text(encoding="utf-8")
+                dashboard = dashboard.replace("</style>", f"\n{layout}\n</style>", 1)
+                dashboard = dashboard.replace("</main>", panel + "</main>", 1)
+                self.send_body(dashboard.encode("utf-8"), "text/html; charset=utf-8")
+            elif route == "/api/live/status" and live is not None:
+                self.send_json(live.snapshots())
+            elif route == "/api/live/frame" and live is not None:
+                camera_id = parse_qs(urlsplit(self.path).query).get("id", [""])[0]
+                state, jpeg = live.frame(camera_id)
+                if jpeg and state["status"] == "live":
+                    self.send_body(jpeg, "image/jpeg")
+                else:
+                    self.send_json({"error": "No live camera frame available."}, 503)
+            elif route == "/":
                 if page is None:
-                    self.send_json({"service": "Reserve Watch API", "status": "ready"})
+                    self.send_body(b'<h1>Reserve Watch</h1><p><a href="/live">Open live phone camera</a></p><p><a href="/dashboard">Open surveillance dashboard</a></p>', "text/html; charset=utf-8")
                 else:
                     self.send_body(page, "text/html; charset=utf-8")
             elif route == "/api/frames":
@@ -251,7 +284,7 @@ def make_handler(frames, images, store, port, legacy_ui=False):
         def do_POST(self):
             route = urlsplit(self.path).path
             action = route.removeprefix("/api/")
-            if route != f"/api/{action}" or action not in ("observe", "patrols", "reviews", "reset"):
+            if route != f"/api/{action}" or action not in ("observe", "patrols", "reviews", "reset", "live/connect", "live/disconnect"):
                 return self.send_json({"error": "Route not found."}, 404)
             hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
             if self.headers.get("Host") not in hosts or self.headers.get("Origin", "") not in (
@@ -265,7 +298,17 @@ def make_handler(frames, images, store, port, legacy_ui=False):
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
                     raise ValueError("Send a JSON object.")
-                self.send_json(store.request(action, data))
+                if action.startswith("live/"):
+                    if live is None:
+                        raise ValueError("Start the backend with --live-model pointing to a checkpoint.")
+                    if action == "live/connect":
+                        camera_id = live.connect(data.get("source"), data.get("name"), data.get("location", ""))
+                        return self.send_json({"id": camera_id})
+                    else:
+                        live.disconnect(data.get("id"))
+                    self.send_json({"status": "disconnected"})
+                else:
+                    self.send_json(store.request(action, data))
             except ValueError as error:
                 self.send_json({"error": str(error)}, 400)
 
@@ -282,18 +325,31 @@ def main(legacy_ui=False):
     parser.add_argument("--frames", type=int, default=60)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--state", type=Path, default=DEFAULT_STATE)
+    parser.add_argument("--live-model", type=Path, help="Animal/human checkpoint for live phone inference")
+    parser.add_argument("--live-device", default="cpu", help="cpu or Intel Arc xpu:0")
+    parser.add_argument("--live-animal-conf", type=float, default=0.25, help="Minimum score for live animal boxes")
+    parser.add_argument("--live-human-conf", type=float, default=0.25, help="Minimum score for live human boxes")
     args = parser.parse_args()
     if args.start < 0 or args.frames < 1 or not 1 <= args.port <= 65535:
         parser.error("Choose a nonnegative start, at least one frame, and a valid port.")
     frames, images, episodes = load_frames(args.run.resolve(), args.start, args.frames)
     store = ReviewStore(args.state.resolve(), episodes)
-    handler = make_handler(frames, images, store, args.port, legacy_ui=legacy_ui)
+    if args.live_model and not args.live_model.is_file():
+        parser.error("The live model checkpoint does not exist.")
+    thresholds = {"animal": args.live_animal_conf, "human": args.live_human_conf}
+    if not all(0 < confidence <= 1 for confidence in thresholds.values()):
+        parser.error("Live confidence thresholds must be greater than 0 and at most 1.")
+    live = LiveCameras(args.live_model.resolve() if args.live_model else None, args.live_device, thresholds)
+    handler = make_handler(frames, images, store, args.port, legacy_ui=legacy_ui, live=live)
     with ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
         print(f"Open http://127.0.0.1:{args.port}", flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
             pass
+        finally:
+            if live:
+                live.stop()
 
 
 if __name__ == "__main__":

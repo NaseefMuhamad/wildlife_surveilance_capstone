@@ -156,15 +156,19 @@ def train_main():
     p.add_argument('--data',default='configs/yolo_dataset.yaml')
     p.add_argument('--model',default='yolov8n.pt',help='Initial pretrained checkpoint for a fresh run')
     p.add_argument('--resume',help='Explicit last.pt from a previous corrected run')
-    p.add_argument('--device',default='cpu')
+    p.add_argument('--device',default='xpu:0')
     p.add_argument('--batch',type=int,default=2)
     p.add_argument('--epochs',type=int,default=50)
-    p.add_argument('--patience', type=int, default=100, help='Epochs without validation improvement before early stopping')
+    p.add_argument('--patience', type=int, default=10, help='Epochs without validation improvement before early stopping')
     p.add_argument('--workers',type=int,default=0)
     p.add_argument('--imgsz',type=int,default=640)
+    p.add_argument('--human-augmentation',action='store_true',
+                   help='Add targeted flips and intensity changes to human-containing training frames')
     args=p.parse_args()
     if min(args.batch,args.epochs,args.imgsz) < 1 or min(args.workers, args.patience) < 0:
         p.error('Invalid training settings')
+    if args.human_augmentation and (args.resume or args.workers != 0):
+        p.error('--human-augmentation requires a fresh run with --workers 0')
     root,cfg=dataset_config(args.data)
     if not {'train','val'} <= cfg.keys():
         raise ValueError('Training YAML must define both train and val splits')
@@ -185,7 +189,7 @@ def train_main():
     model=YOLO(str(checkpoint))
     provenance={'dataset_manifest_sha256':dataset_sha,'dataset_root':str(root),'inventory':inventory,
                 'initial_checkpoint':str(checkpoint),'initial_checkpoint_sha256':file_hash(checkpoint),
-                'torch':torch.__version__,'device':args.device}
+                'torch':torch.__version__,'device':args.device,'human_augmentation':args.human_augmentation}
     def record(trainer):
         write_json(Path(trainer.save_dir)/'run_manifest.json',provenance)
     model.add_callback('on_pretrain_routine_end',record)
@@ -195,4 +199,8 @@ def train_main():
         options['resume']=str(checkpoint)
     else:
         options.update(epochs=args.epochs,patience=args.patience,project=str(PROJECT/'runs'),name=name_now('birdsai_corrected'),amp=False)
+    if args.human_augmentation:
+        from human_augmentation import HumanAugmentationTrainer
+        options['trainer'] = HumanAugmentationTrainer
+        options['name'] = name_now('birdsai_human_augmentation')
     model.train(**options)

@@ -84,7 +84,7 @@ def prepare(train_root, test_root, output, seed=42, train_ratio=.85, allow_missi
             print(f'{split}: {seq}: {exported} annotated frames',flush=True)
     audit['splits'] = validate_root(output,splits,verify_images=False)
     write_json(output/'manifest.json',audit)
-    cfg = {'path':output.as_posix(),'train':'images/train','val':'images/val','names':NAMES}
+    cfg = {'path':'.','train':'images/train','val':'images/val','names':NAMES}
     if test_root:
         cfg['test'] = 'images/test'
     (output/'dataset.yaml').write_text(yaml.safe_dump(cfg,sort_keys=False),encoding='utf-8')

@@ -155,8 +155,11 @@ def validate_root(root, splits=('train', 'val', 'test'), verify_images=True):
 
 
 def dataset_config(path):
-    cfg = read_yaml(resolve(path))
-    root = resolve(cfg.get('path', 'data/processed_v2'))
+    config_path = resolve(path)
+    cfg = read_yaml(config_path)
+    dataset_path = cfg.get('path', 'data/processed_v2')
+    # Exported YAML files use "." to refer to their own dataset directory.
+    root = config_path.parent if dataset_path == '.' else resolve(dataset_path)
     names = cfg.get('names')
     if isinstance(names, list):
         names = dict(enumerate(names))
